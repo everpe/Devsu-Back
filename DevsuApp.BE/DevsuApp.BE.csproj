@@ -23,8 +23,11 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="API\" />
-      <Folder Include="Application\" />
+      <Folder Include="API\Controllers\" />
+      <Folder Include="API\Middlewares\" />
+      <Folder Include="Application\Interfaces\Services\" />
+      <Folder Include="Application\Services\" />
+      <Folder Include="Infraestructure\Exceptions\" />
       <Folder Include="Scripts\" />
       <Folder Include="Tests\" />
     </ItemGroup>
