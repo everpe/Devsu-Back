@@ -58,6 +58,12 @@ builder.Services.AddCors(options =>
 
 
 var app = builder.Build();
+//para que ejecute migraciones al iniciar la app
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    db.Database.Migrate();
+}
 
 app.UseSwagger();
 app.UseSwaggerUI(c =>

@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  # Base de Datos SQL Server
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: bankapi-sqlserver
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=YourStrong@Password123
+      - MSSQL_PID=Developer
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+      - ./Scripts:/docker-entrypoint-initdb.d
+    networks:
+      - bankapi-network
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P YourStrong@Password123 -C -Q 'SELECT 1' || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
+
+  # API .NET
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bankapi-api
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=BankDB;User Id=sa;Password=YourStrong@Password123;TrustServerCertificate=True;
+    ports:
+      - "5000:8080"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    networks:
+      - bankapi-network
+    restart: on-failure
+
+# Volúmenes persistentes
+volumes:
+  sqlserver_data:
+    driver: local
+
+# Red interna
+networks:
+  bankapi-network:
+    driver: bridge

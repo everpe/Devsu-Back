@@ -1,0 +1,31 @@
+# Binaries
+**/bin/
+**/obj/
+**/out/
+
+# Visual Studio / Rider
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+
+# NuGet
+**/packages/
+*.nupkg
+
+# Test Results
+TestResults/
+*.trx
+
+# Git
+.git/
+.gitignore
+
+# Docker
+**/Dockerfile
+**/docker-compose*
+
+# Otros
+*.md
+*.log
