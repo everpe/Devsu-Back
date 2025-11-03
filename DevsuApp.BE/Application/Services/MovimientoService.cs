@@ -10,7 +10,7 @@ namespace DevsuApp.BE.Application.Services;
  public class MovimientoService : IMovimientoService
     {
         private readonly IUnitOfWork _unitOfWork;
-        private const decimal LIMITE_DIARIO_RETIRO = 1000m;
+        private const decimal LIMITE_DIARIO_RETIRO = 1000m;//para que lo tome como decimal $
 
         public MovimientoService(IUnitOfWork unitOfWork)
         {
