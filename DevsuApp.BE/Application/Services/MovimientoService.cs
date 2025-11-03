@@ -150,7 +150,8 @@ namespace DevsuApp.BE.Application.Services;
                     TipoMovimiento = movimiento.TipoMovimiento.ToString(),
                     Valor = movimiento.Valor,
                     Saldo = movimiento.Saldo,
-                    CuentaId = movimiento.CuentaId
+                    CuentaId = movimiento.CuentaId,
+                    NumeroCuenta = cuenta.NumeroCuenta
                 };
             }
             catch
