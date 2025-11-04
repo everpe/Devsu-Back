@@ -21,129 +21,88 @@ public class ReportesController : ControllerBase
     }
 
     /// <summary>
-    /// Genera un reporte de estado de cuenta por rango de fechas
+    /// Genera el estado de cuenta en formato JSON
     /// </summary>
-    /// <remarks>
-    /// Ejemplo de uso:
-    /// 
-    ///     GET /api/reportes?clienteId=1&amp;fechaInicio=2024-02-01&amp;fechaFin=2024-02-28
-    ///     
-    /// El reporte incluye:
-    /// - Información del cliente
-    /// - Cuentas asociadas con sus saldos
-    /// - Movimientos realizados en el rango de fechas
-    /// - Total de créditos y débitos
-    /// </remarks>
     /// <param name="clienteId">ID del cliente</param>
-    /// <param name="fechaInicio">Fecha de inicio del reporte (formato: yyyy-MM-dd)</param>
-    /// <param name="fechaFin">Fecha de fin del reporte (formato: yyyy-MM-dd)</param>
-    /// <returns>Estado de cuenta en formato JSON</returns>
+    /// <param name="fechaInicio">Fecha inicio del reporte</param>
+    /// <param name="fechaFin">Fecha fin del reporte</param>
     [HttpGet]
-    [ProducesResponseType(typeof(EstadoCuentaDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<EstadoCuentaDto>> GetEstadoCuenta(
+    public async Task<IActionResult> GenerarEstadoCuenta(
         [FromQuery] int clienteId,
         [FromQuery] DateTime fechaInicio,
         [FromQuery] DateTime fechaFin)
     {
-        _logger.LogInformation(
-            "Generando reporte para cliente {ClienteId} desde {FechaInicio} hasta {FechaFin}",
-            clienteId, fechaInicio, fechaFin);
-
-        if (fechaInicio > fechaFin)
+        try
         {
-            return BadRequest(new { message = "La fecha de inicio no puede ser mayor a la fecha fin" });
+            var reporte = await _reporteService.GenerarEstadoCuentaAsync(clienteId, fechaInicio, fechaFin);
+            return Ok(reporte);
         }
-
-        var reporte = await _reporteService.GetEstadoCuentaAsync(clienteId, fechaInicio, fechaFin);
-        
-        _logger.LogInformation(
-            "Reporte generado exitosamente - Total Créditos: {TotalCreditos}, Total Débitos: {TotalDebitos}",
-            reporte.TotalCreditos, reporte.TotalDebitos);
-
-        return Ok(reporte);
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al generar estado de cuenta");
+            return StatusCode(500, new { message = "Error al generar el reporte" });
+        }
     }
 
     /// <summary>
-    /// Genera un reporte de estado de cuenta en formato PDF (Base64)
+    /// Genera el estado de cuenta en formato PDF (Base64)
     /// </summary>
-    /// <remarks>
-    /// Ejemplo de uso:
-    /// 
-    ///     GET /api/reportes/pdf?clienteId=1&amp;fechaInicio=2024-02-01&amp;fechaFin=2024-02-28
-    ///     
-    /// Retorna el PDF codificado en Base64 que puede ser:
-    /// - Descargado por el frontend
-    /// - Convertido a archivo PDF
-    /// - Enviado por email
-    /// </remarks>
-    /// <param name="clienteId">ID del cliente</param>
-    /// <param name="fechaInicio">Fecha de inicio del reporte</param>
-    /// <param name="fechaFin">Fecha de fin del reporte</param>
-    /// <returns>PDF en formato Base64</returns>
     [HttpGet("pdf")]
-    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult> GetEstadoCuentaPdf(
+    public async Task<IActionResult> GenerarEstadoCuentaPdf(
         [FromQuery] int clienteId,
         [FromQuery] DateTime fechaInicio,
         [FromQuery] DateTime fechaFin)
     {
-        _logger.LogInformation(
-            "Generando reporte PDF para cliente {ClienteId} desde {FechaInicio} hasta {FechaFin}",
-            clienteId, fechaInicio, fechaFin);
-
-        if (fechaInicio > fechaFin)
+        try
         {
-            return BadRequest(new { message = "La fecha de inicio no puede ser mayor a la fecha fin" });
+            var pdfBytes = await _reporteService.GenerarEstadoCuentaPdfAsync(clienteId, fechaInicio, fechaFin);
+            var base64 = Convert.ToBase64String(pdfBytes);
+
+            return Ok(new
+            {
+                pdf = base64,
+                filename = $"EstadoCuenta_{clienteId}_{fechaInicio:yyyyMMdd}_{fechaFin:yyyyMMdd}.pdf"
+            });
         }
-
-        var pdfBytes = await _reporteService.GetEstadoCuentaPdfAsync(clienteId, fechaInicio, fechaFin);
-        var base64Pdf = Convert.ToBase64String(pdfBytes);
-
-        _logger.LogInformation("Reporte PDF generado exitosamente para cliente {ClienteId}", clienteId);
-
-        return Ok(new
+        catch (KeyNotFoundException ex)
         {
-            clienteId,
-            fechaInicio,
-            fechaFin,
-            formato = "PDF",
-            contenidoBase64 = base64Pdf,
-            mensaje = "Para descargar el PDF, decodifica el contenidoBase64"
-        });
+            return NotFound(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al generar PDF");
+            return StatusCode(500, new { message = "Error al generar el PDF" });
+        }
     }
 
     /// <summary>
-    /// Descarga directa del PDF (alternativa)
+    /// Descarga directa del PDF
     /// </summary>
-    /// <param name="clienteId">ID del cliente</param>
-    /// <param name="fechaInicio">Fecha de inicio del reporte</param>
-    /// <param name="fechaFin">Fecha de fin del reporte</param>
-    /// <returns>Archivo PDF para descarga</returns>
     [HttpGet("pdf/download")]
-    [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult> DownloadEstadoCuentaPdf(
+    public async Task<IActionResult> DescargarPdf(
         [FromQuery] int clienteId,
         [FromQuery] DateTime fechaInicio,
         [FromQuery] DateTime fechaFin)
     {
-        _logger.LogInformation(
-            "Descargando reporte PDF para cliente {ClienteId}",
-            clienteId);
-
-        if (fechaInicio > fechaFin)
+        try
         {
-            return BadRequest(new { message = "La fecha de inicio no puede ser mayor a la fecha fin" });
+            var pdfBytes = await _reporteService.GenerarEstadoCuentaPdfAsync(clienteId, fechaInicio, fechaFin);
+            var fileName = $"EstadoCuenta_{clienteId}_{fechaInicio:yyyyMMdd}_{fechaFin:yyyyMMdd}.pdf";
+
+            return File(pdfBytes, "application/pdf", fileName);
         }
-
-        var pdfBytes = await _reporteService.GetEstadoCuentaPdfAsync(clienteId, fechaInicio, fechaFin);
-        
-        var fileName = $"EstadoCuenta_Cliente{clienteId}_{fechaInicio:yyyyMMdd}_{fechaFin:yyyyMMdd}.pdf";
-
-        return File(pdfBytes, "application/pdf", fileName);
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al descargar PDF");
+            return StatusCode(500, new { message = "Error al generar el PDF" });
+        }
     }
 }
