@@ -18,27 +18,34 @@ namespace DevsuApp.BE.Application.Services;
         public async Task<IEnumerable<CuentaDto>> GetAllAsync()
         {
             var cuentas = await _unitOfWork.Cuentas.GetAllAsync();
-            
+            var clientes = await _unitOfWork.Clientes.GetAllAsync();
+
+            var cuentasJoin = from cuenta in cuentas
+                join cliente in clientes on cuenta.ClienteId equals cliente.ClienteId
+                select new { cuenta, cliente };
+
             var cuentasDto = new List<CuentaDto>();
-            
-            foreach (var cuenta in cuentas)
+
+            foreach (var item in cuentasJoin)
             {
-                var saldoActual = await CalcularSaldoActualAsync(cuenta.Id, cuenta.SaldoInicial);
-                
+                var saldoActual = await CalcularSaldoActualAsync(item.cuenta.Id, item.cuenta.SaldoInicial);
+
                 cuentasDto.Add(new CuentaDto
                 {
-                    Id = cuenta.Id,
-                    NumeroCuenta = cuenta.NumeroCuenta,
-                    TipoCuenta = cuenta.TipoCuenta.ToString(),
-                    SaldoInicial = cuenta.SaldoInicial,
+                    Id = item.cuenta.Id,
+                    NumeroCuenta = item.cuenta.NumeroCuenta,
+                    TipoCuenta = item.cuenta.TipoCuenta.ToString(),
+                    SaldoInicial = item.cuenta.SaldoInicial,
                     SaldoActual = saldoActual,
-                    Estado = cuenta.Estado,
-                    ClienteId = cuenta.ClienteId
+                    Estado = item.cuenta.Estado,
+                    ClienteId = item.cuenta.ClienteId,
+                    NombreCliente = item.cliente.Nombre
                 });
             }
 
             return cuentasDto;
         }
+
 
         public async Task<CuentaDto?> GetByIdAsync(int id)
         {

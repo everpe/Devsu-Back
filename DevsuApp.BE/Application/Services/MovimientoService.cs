@@ -20,19 +20,26 @@ namespace DevsuApp.BE.Application.Services;
         public async Task<IEnumerable<MovimientoDto>> GetAllAsync()
         {
             var movimientos = await _unitOfWork.Movimientos.GetAllAsync();
-            
-            return movimientos.Select(m => new MovimientoDto
-            {
-                Id = m.Id,
-                Fecha = m.Fecha,
-                TipoMovimiento = m.TipoMovimiento.ToString(),
-                Valor = m.Valor,
-                Saldo = m.Saldo,
-                CuentaId = m.CuentaId
-            });
+            var cuentas = await _unitOfWork.Cuentas.GetAllAsync();
+
+            var movimientosDto = from movimiento in movimientos
+                                 join cuenta in cuentas on movimiento.CuentaId equals cuenta.Id
+                                 select new MovimientoDto
+                                 {
+                                     Id = movimiento.Id,
+                                     Fecha = movimiento.Fecha,
+                                     TipoMovimiento = movimiento.TipoMovimiento.ToString(),
+                                     Valor = movimiento.Valor,
+                                     Saldo = movimiento.Saldo,
+                                     CuentaId = movimiento.CuentaId,
+                                     NumeroCuenta = cuenta.NumeroCuenta
+                                 };
+
+            return movimientosDto.ToList();
         }
 
-        public async Task<MovimientoDto?> GetByIdAsync(int id)
+
+    public async Task<MovimientoDto?> GetByIdAsync(int id)
         {
             var movimiento = await _unitOfWork.Movimientos.GetByIdAsync(id);
             
